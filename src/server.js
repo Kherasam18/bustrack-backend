@@ -146,6 +146,10 @@ async function start() {
             console.log(`🚌  Health      : http://localhost:${PORT}/health`);
             console.log('🚌 ═══════════════════════════════════════════');
             console.log('');
+
+            // Start the RabbitMQ notification worker
+            const { startWorker } = require('./workers/notificationWorker');
+            try { startWorker(); } catch (err) { console.error('Worker failed to start:', err); }
         });
     } catch (err) {
         console.error('❌ Failed to start server:', err);

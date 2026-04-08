@@ -8,6 +8,7 @@
 // =============================================================================
 
 const pool = require('../../config/db');
+const notificationsService = require('../notifications/notifications.service');
 
 // UUID format validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -167,6 +168,11 @@ async function startPickup(driverId, schoolId) {
         [schoolId, bus_id, driverId, route_id]
     );
 
+    // Fire-and-forget notification — never block the journey action
+    notificationsService.queueJourneyNotification(
+        result.rows[0].id, 'PICKUP_STARTED', schoolId
+    ).catch(err => console.error('Notification queue error (startPickup):', err));
+
     return { journey: result.rows[0] };
 }
 
@@ -202,6 +208,11 @@ async function arrivedSchool(driverId, schoolId) {
         [existing.id, schoolId]
     );
 
+    // Fire-and-forget notification — never block the journey action
+    notificationsService.queueJourneyNotification(
+        result.rows[0].id, 'ARRIVED_SCHOOL', schoolId
+    ).catch(err => console.error('Notification queue error (arrivedSchool):', err));
+
     return { journey: result.rows[0] };
 }
 
@@ -235,6 +246,11 @@ async function startDrop(driverId, schoolId) {
          RETURNING *`,
         [schoolId, bus_id, driverId, route_id]
     );
+
+    // Fire-and-forget notification — never block the journey action
+    notificationsService.queueJourneyNotification(
+        result.rows[0].id, 'DROP_STARTED', schoolId
+    ).catch(err => console.error('Notification queue error (startDrop):', err));
 
     return { journey: result.rows[0] };
 }
@@ -270,6 +286,11 @@ async function endJourney(driverId, schoolId) {
          RETURNING *`,
         [existing.id, schoolId]
     );
+
+    // Fire-and-forget notification — never block the journey action
+    notificationsService.queueJourneyNotification(
+        result.rows[0].id, 'JOURNEY_ENDED', schoolId
+    ).catch(err => console.error('Notification queue error (endJourney):', err));
 
     return { journey: result.rows[0] };
 }
