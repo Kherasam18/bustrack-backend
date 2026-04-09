@@ -135,6 +135,31 @@ async function processLocationUpdate(driverId, schoolId, body) {
 
     const lastSignalAt = updateResult.rows[0].last_signal_at;
 
+    // 5b. Resolve any open GPS flags now that tracking has recovered
+    try {
+        const flagResult = await pool.query(
+            `UPDATE journey_flags
+             SET resolved_at = NOW(), updated_at = NOW()
+             WHERE journey_id = $1::uuid
+               AND type IN ('GPS_WEAK', 'GPS_LOST')
+               AND resolved_at IS NULL`,
+            [journey_id]
+        );
+
+        if (flagResult.rowCount > 0) {
+            logger.info('locationService: GPS flags resolved on recovery', {
+                journeyId: journey_id,
+                rowsResolved: flagResult.rowCount,
+            });
+        }
+    } catch (flagErr) {
+        // Best-effort cleanup — never block the GPS update response
+        logger.warn('locationService: failed to resolve GPS flags', {
+            journeyId: journey_id,
+            error: flagErr.message,
+        });
+    }
+
     // 6. Fire-and-forget Firebase Realtime Database write
     const firebasePayload = {
         lat,
