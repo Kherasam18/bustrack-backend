@@ -9,6 +9,7 @@
 const pool = require('../../config/db');
 const { success, error } = require('../../utils/response');
 const { parsePagination, paginationMeta } = require('../../utils/pagination');
+const logger = require('../../config/logger');
 
 // Regex for UUID v1–v5 validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -78,7 +79,7 @@ async function createStudent(req, res) {
         return success(res, { student: result.rows[0] }, 'Student created successfully', 201);
 
     } catch (err) {
-        console.error('createStudent error:', err);
+        logger.error('createStudent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to create student', 500, err.message);
     }
 }
@@ -164,7 +165,7 @@ async function listStudents(req, res) {
         }, 'Students retrieved successfully');
 
     } catch (err) {
-        console.error('listStudents error:', err);
+        logger.error('listStudents error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve students', 500, err.message);
     }
 }
@@ -228,7 +229,7 @@ async function getStudent(req, res) {
         }, 'Student retrieved successfully');
 
     } catch (err) {
-        console.error('getStudent error:', err);
+        logger.error('getStudent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve student', 500, err.message);
     }
 }
@@ -328,7 +329,7 @@ async function updateStudent(req, res) {
         return success(res, { student: result.rows[0] }, 'Student updated successfully');
 
     } catch (err) {
-        console.error('updateStudent error:', err);
+        logger.error('updateStudent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to update student', 500, err.message);
     }
 }
@@ -393,7 +394,7 @@ async function deactivateStudent(req, res) {
     } catch (err) {
         await client.query('ROLLBACK').catch(() => {});
         client.release();
-        console.error('deactivateStudent error:', err);
+        logger.error('deactivateStudent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to deactivate student', 500, err.message);
     }
 }
@@ -438,7 +439,7 @@ async function reactivateStudent(req, res) {
         return success(res, { student: result.rows[0] }, 'Student reactivated successfully');
 
     } catch (err) {
-        console.error('reactivateStudent error:', err);
+        logger.error('reactivateStudent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to reactivate student', 500, err.message);
     }
 }
@@ -510,7 +511,7 @@ async function linkParent(req, res) {
         }, 'Parent linked to student successfully', 201);
 
     } catch (err) {
-        console.error('linkParent error:', err);
+        logger.error('linkParent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to link parent to student', 500, err.message);
     }
 }
@@ -558,7 +559,7 @@ async function unlinkParent(req, res) {
         return success(res, {}, 'Parent unlinked from student successfully');
 
     } catch (err) {
-        console.error('unlinkParent error:', err);
+        logger.error('unlinkParent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to unlink parent from student', 500, err.message);
     }
 }
@@ -676,7 +677,7 @@ async function bulkImport(req, res) {
     } catch (err) {
         await client.query('ROLLBACK').catch(() => {});
         client.release();
-        console.error('bulkImport error:', err);
+        logger.error('bulkImport error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to import students', 500, err.message);
     }
 }

@@ -13,6 +13,7 @@
 const { success, error } = require('../../utils/response');
 const { isValidUUID } = require('../journeys/journeys.service');
 const dashboardService = require('./dashboard.service');
+const logger = require('../../config/logger');
 
 // =============================================================================
 // getLive — GET /api/dashboard/live
@@ -30,7 +31,7 @@ async function getLive(req, res) {
             total_buses: result.total_buses,
         }, 'Live fleet data retrieved');
     } catch (err) {
-        console.error('getLive error:', err);
+        logger.error('getLive error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -58,7 +59,7 @@ async function getBusDetail(req, res) {
 
         return success(res, { bus }, 'Bus detail retrieved');
     } catch (err) {
-        console.error('getBusDetail error:', err);
+        logger.error('getBusDetail error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -75,7 +76,7 @@ async function getStats(req, res) {
 
         return success(res, { stats }, 'Dashboard stats retrieved');
     } catch (err) {
-        console.error('getStats error:', err);
+        logger.error('getStats error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }

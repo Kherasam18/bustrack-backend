@@ -4,6 +4,7 @@
 // =============================================================================
 
 const nodemailer = require('nodemailer');
+const logger = require('./logger');
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -18,9 +19,9 @@ const transporter = nodemailer.createTransport({
 // Verify SMTP connection on startup
 transporter.verify((err) => {
     if (err) {
-        console.warn('⚠️  SMTP connection failed:', err.message);
+        logger.warn('SMTP connection failed', { error: err.message });
     } else {
-        console.log('✅ SMTP mailer ready');
+        logger.info('SMTP mailer ready');
     }
 });
 

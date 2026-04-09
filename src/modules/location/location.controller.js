@@ -11,6 +11,7 @@
 const { success, error } = require('../../utils/response');
 const { isValidUUID } = require('../journeys/journeys.service');
 const locationService = require('./location.service');
+const logger = require('../../config/logger');
 
 // =============================================================================
 // updateLocation — POST /api/location/update
@@ -29,7 +30,7 @@ async function updateLocation(req, res) {
 
         return success(res, result.data, 'Location updated');
     } catch (err) {
-        console.error('updateLocation error:', err);
+        logger.error('updateLocation error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -56,7 +57,7 @@ async function getJourneyLocations(req, res) {
 
         return success(res, result.data, 'Location log retrieved');
     } catch (err) {
-        console.error('getJourneyLocations error:', err);
+        logger.error('getJourneyLocations error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }

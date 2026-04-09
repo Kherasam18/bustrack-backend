@@ -13,6 +13,7 @@
 const pool = require('../config/db');
 const { getRabbitMQChannel } = require('../config/rabbitmq');
 const admin = require('../config/firebase');
+const logger = require('../config/logger');
 
 const QUEUE_NAME = 'bustrack.notifications';
 
@@ -24,7 +25,7 @@ async function startWorker() {
         await channel.assertQueue(QUEUE_NAME, { durable: true });
         channel.prefetch(1);
 
-        console.log('🔔 Notification worker started — waiting for messages');
+        logger.info('Notification worker started — waiting for messages');
 
         channel.consume(QUEUE_NAME, async (msg) => {
             if (!msg) return;
@@ -43,7 +44,7 @@ async function startWorker() {
                 );
 
                 if (notifResult.rowCount === 0) {
-                    console.log('Worker: notification not found, skipping', notification_id);
+                    logger.warn('Worker: notification not found, skipping', { notification_id });
                     channel.ack(msg);
                     return;
                 }
@@ -52,7 +53,7 @@ async function startWorker() {
 
                 // Skip if already delivered
                 if (notification.delivery_status === 'SENT') {
-                    console.log('Worker: notification already sent, skipping', notification_id);
+                    logger.info('Worker: notification already sent, skipping', { notification_id });
                     channel.ack(msg);
                     return;
                 }
@@ -72,7 +73,7 @@ async function startWorker() {
                          WHERE id = $1::uuid`,
                         [notification_id]
                     );
-                    console.log('Worker: no FCM tokens for user', notification.recipient_user_id);
+                    logger.warn('Worker: no FCM tokens for user', { userId: notification.recipient_user_id });
                     channel.ack(msg);
                     return;
                 }
@@ -94,7 +95,7 @@ async function startWorker() {
                             },
                         });
                     } catch (fcmErr) {
-                        console.error('Worker: FCM send error for token', row.fcm_token, fcmErr.message);
+                        logger.error('Worker: FCM send error', { error: fcmErr.message });
                         allSucceeded = false;
                     }
                 }
@@ -120,14 +121,14 @@ async function startWorker() {
                 channel.ack(msg);
             } catch (err) {
                 // vi. Catch all errors per message — never crash the consumer loop
-                console.error('Worker: error processing message:', err);
+                logger.error('Worker: error processing message', { error: err.message, stack: err.stack });
                 channel.ack(msg);
             }
         });
     } catch (err) {
         // e. On RabbitMQ connection error — log and retry after 5 seconds
-        console.error('Notification worker connection error:', err.message);
-        console.log('Retrying notification worker in 5 seconds...');
+        logger.error('Notification worker connection error', { error: err.message });
+        logger.info('Retrying notification worker in 5 seconds...');
         setTimeout(startWorker, 5000);
     }
 }

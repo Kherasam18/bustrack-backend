@@ -13,6 +13,7 @@
 
 const pool = require('../../config/db');
 const { getRabbitMQChannel } = require('../../config/rabbitmq');
+const logger = require('../../config/logger');
 
 const QUEUE_NAME = 'bustrack.notifications';
 
@@ -47,7 +48,7 @@ async function queueJourneyNotification(journeyId, type, schoolId) {
         );
 
         if (journeyResult.rowCount === 0) {
-            console.error('queueJourneyNotification: journey not found', journeyId);
+            logger.error('queueJourneyNotification: journey not found', { journeyId });
             return;
         }
 
@@ -90,7 +91,7 @@ async function queueJourneyNotification(journeyId, type, schoolId) {
         );
 
         if (parentsResult.rowCount === 0) {
-            console.log('queueJourneyNotification: no parents to notify for journey', journeyId);
+            logger.info('queueJourneyNotification: no parents to notify', { journeyId });
             return;
         }
 
@@ -125,10 +126,10 @@ async function queueJourneyNotification(journeyId, type, schoolId) {
         }
 
         // h. Log count
-        console.log(`queueJourneyNotification: ${notificationIds.length} notifications queued for journey ${journeyId} (${type})`);
+        logger.info('Notifications queued', { count: notificationIds.length, journeyId, type });
     } catch (err) {
         // i. Never throw — log and return gracefully
-        console.error('queueJourneyNotification error:', err);
+        logger.error('queueJourneyNotification error', { error: err.message, stack: err.stack });
     }
 }
 

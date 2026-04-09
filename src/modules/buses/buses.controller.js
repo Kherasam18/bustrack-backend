@@ -10,6 +10,7 @@
 const pool = require('../../config/db');
 const { success, error } = require('../../utils/response');
 const { parsePagination, paginationMeta } = require('../../utils/pagination');
+const logger = require('../../config/logger');
 
 // Regex for UUID v1–v5 validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -78,7 +79,7 @@ async function createBus(req, res) {
         return success(res, { bus: result.rows[0] }, 'Bus created successfully', 201);
 
     } catch (err) {
-        console.error('createBus error:', err);
+        logger.error('createBus error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to create bus', 500, err.message);
     }
 }
@@ -171,7 +172,7 @@ async function listBuses(req, res) {
         }, 'Buses retrieved successfully');
 
     } catch (err) {
-        console.error('listBuses error:', err);
+        logger.error('listBuses error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve buses', 500, err.message);
     }
 }
@@ -272,7 +273,7 @@ async function getBus(req, res) {
         }, 'Bus retrieved successfully');
 
     } catch (err) {
-        console.error('getBus error:', err);
+        logger.error('getBus error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve bus', 500, err.message);
     }
 }
@@ -364,7 +365,7 @@ async function updateBus(req, res) {
         return success(res, { bus: result.rows[0] }, 'Bus updated successfully');
 
     } catch (err) {
-        console.error('updateBus error:', err);
+        logger.error('updateBus error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to update bus', 500, err.message);
     }
 }
@@ -440,7 +441,7 @@ async function deactivateBus(req, res) {
     } catch (err) {
         await client.query('ROLLBACK').catch(() => {});
         client.release();
-        console.error('deactivateBus error:', err);
+        logger.error('deactivateBus error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to deactivate bus', 500, err.message);
     }
 }
@@ -485,7 +486,7 @@ async function reactivateBus(req, res) {
         return success(res, { bus: result.rows[0] }, 'Bus reactivated successfully');
 
     } catch (err) {
-        console.error('reactivateBus error:', err);
+        logger.error('reactivateBus error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to reactivate bus', 500, err.message);
     }
 }
@@ -579,7 +580,7 @@ async function createRoute(req, res) {
         return success(res, { route: result.rows[0] }, 'Route created successfully', 201);
 
     } catch (err) {
-        console.error('createRoute error:', err);
+        logger.error('createRoute error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to create route', 500, err.message);
     }
 }
@@ -653,7 +654,7 @@ async function getRoute(req, res) {
         return success(res, { route }, 'Route retrieved successfully');
 
     } catch (err) {
-        console.error('getRoute error:', err);
+        logger.error('getRoute error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve route', 500, err.message);
     }
 }
@@ -757,7 +758,7 @@ async function updateRoute(req, res) {
         return success(res, { route: result.rows[0] }, 'Route updated successfully');
 
     } catch (err) {
-        console.error('updateRoute error:', err);
+        logger.error('updateRoute error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to update route', 500, err.message);
     }
 }
@@ -847,7 +848,7 @@ async function addStop(req, res) {
         return success(res, { stop: result.rows[0] }, 'Stop added successfully', 201);
 
     } catch (err) {
-        console.error('addStop error:', err);
+        logger.error('addStop error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to add stop', 500, err.message);
     }
 }
@@ -973,7 +974,7 @@ async function updateStop(req, res) {
         return success(res, { stop: result.rows[0] }, 'Stop updated successfully');
 
     } catch (err) {
-        console.error('updateStop error:', err);
+        logger.error('updateStop error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to update stop', 500, err.message);
     }
 }
@@ -1021,7 +1022,7 @@ async function deleteStop(req, res) {
         return success(res, {}, 'Stop deleted successfully');
 
     } catch (err) {
-        console.error('deleteStop error:', err);
+        logger.error('deleteStop error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to delete stop', 500, err.message);
     }
 }
@@ -1142,7 +1143,7 @@ async function reorderStops(req, res) {
     } catch (err) {
         await client.query('ROLLBACK').catch(() => {});
         client.release();
-        console.error('reorderStops error:', err);
+        logger.error('reorderStops error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to reorder stops', 500, err.message);
     }
 }
@@ -1302,7 +1303,7 @@ async function assignStudent(req, res) {
     } catch (err) {
         await client.query('ROLLBACK').catch(() => {});
         client.release();
-        console.error('assignStudent error:', err);
+        logger.error('assignStudent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to assign student to bus', 500, err.message);
     }
 }
@@ -1384,7 +1385,7 @@ async function unassignStudent(req, res) {
     } catch (err) {
         await client.query('ROLLBACK').catch(() => {});
         client.release();
-        console.error('unassignStudent error:', err);
+        logger.error('unassignStudent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to unassign student from bus', 500, err.message);
     }
 }
@@ -1456,7 +1457,7 @@ async function listBusStudents(req, res) {
         }, 'Bus students retrieved successfully');
 
     } catch (err) {
-        console.error('listBusStudents error:', err);
+        logger.error('listBusStudents error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve bus students', 500, err.message);
     }
 }

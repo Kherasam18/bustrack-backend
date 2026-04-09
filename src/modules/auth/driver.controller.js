@@ -13,6 +13,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../../config/db');
 const { signToken } = require('../../utils/jwt');
 const { success, error } = require('../../utils/response');
+const logger = require('../../config/logger');
 
 // -----------------------------------------------------------------------------
 // POST /auth/driver/login
@@ -80,7 +81,7 @@ async function login(req, res) {
         }, 'Login successful');
 
     } catch (err) {
-        console.error('Driver login error:', err);
+        logger.error('Driver login error', { error: err.message, stack: err.stack });
         return error(res, 'Login failed', 500, err.message);
     }
 }
@@ -124,7 +125,7 @@ async function changePassword(req, res) {
         return success(res, {}, 'Password changed successfully');
 
     } catch (err) {
-        console.error('Driver changePassword error:', err);
+        logger.error('Driver changePassword error', { error: err.message, stack: err.stack });
         return error(res, 'Password change failed', 500, err.message);
     }
 }

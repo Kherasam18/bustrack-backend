@@ -15,6 +15,7 @@
 const pool = require('../../config/db');
 const { success, error } = require('../../utils/response');
 const { parsePagination, paginationMeta } = require('../../utils/pagination');
+const logger = require('../../config/logger');
 
 // Regex for UUID v1–v5 validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -115,7 +116,7 @@ async function listRoutes(req, res) {
         }, 'Routes retrieved successfully');
 
     } catch (err) {
-        console.error('listRoutes error:', err);
+        logger.error('listRoutes error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve routes', 500, err.message);
     }
 }
@@ -217,7 +218,7 @@ async function getRoute(req, res) {
         return success(res, { route }, 'Route retrieved successfully');
 
     } catch (err) {
-        console.error('getRoute error:', err);
+        logger.error('getRoute error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve route', 500, err.message);
     }
 }
@@ -331,7 +332,7 @@ async function assignStudentToStop(req, res) {
         }, 'Student assigned to stop successfully', 201);
 
     } catch (err) {
-        console.error('assignStudentToStop error:', err);
+        logger.error('assignStudentToStop error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to assign student to stop', 500, err.message);
     }
 }
@@ -391,7 +392,7 @@ async function removeStudentFromStop(req, res) {
         return success(res, {}, 'Student removed from stop successfully');
 
     } catch (err) {
-        console.error('removeStudentFromStop error:', err);
+        logger.error('removeStudentFromStop error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to remove student from stop', 500, err.message);
     }
 }
@@ -452,7 +453,7 @@ async function listStopStudents(req, res) {
         }, 'Stop students retrieved successfully');
 
     } catch (err) {
-        console.error('listStopStudents error:', err);
+        logger.error('listStopStudents error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve stop students', 500, err.message);
     }
 }
@@ -496,7 +497,7 @@ async function getMyRoute(req, res) {
             }
         } catch (journeyErr) {
             // journeys table may not exist yet — fall through to default lookup
-            console.warn('getMyRoute: journeys lookup skipped —', journeyErr.message);
+            logger.warn('getMyRoute: journeys lookup skipped', { error: journeyErr.message });
         }
 
         // --- Step 2: Fall back to default_driver assignment ---
@@ -581,7 +582,7 @@ async function getMyRoute(req, res) {
         return success(res, { route }, 'Route retrieved successfully');
 
     } catch (err) {
-        console.error('getMyRoute error:', err);
+        logger.error('getMyRoute error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve your route', 500, err.message);
     }
 }

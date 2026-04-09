@@ -9,6 +9,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../../config/db');
 const { success, error } = require('../../utils/response');
 const { parsePagination, paginationMeta } = require('../../utils/pagination');
+const logger = require('../../config/logger');
 
 // Regex for UUID v4 validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -69,7 +70,7 @@ async function createSchool(req, res) {
         return success(res, { school: result.rows[0] }, 'School created successfully', 201);
 
     } catch (err) {
-        console.error('createSchool error:', err);
+        logger.error('createSchool error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to create school', 500, err.message);
     }
 }
@@ -133,7 +134,7 @@ async function listSchools(req, res) {
         }, 'Schools retrieved successfully');
 
     } catch (err) {
-        console.error('listSchools error:', err);
+        logger.error('listSchools error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve schools', 500, err.message);
     }
 }
@@ -201,7 +202,7 @@ async function getSchool(req, res) {
         }, 'School retrieved successfully');
 
     } catch (err) {
-        console.error('getSchool error:', err);
+        logger.error('getSchool error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve school', 500, err.message);
     }
 }
@@ -281,7 +282,7 @@ async function updateSchool(req, res) {
         return success(res, { school: result.rows[0] }, 'School updated successfully');
 
     } catch (err) {
-        console.error('updateSchool error:', err);
+        logger.error('updateSchool error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to update school', 500, err.message);
     }
 }
@@ -344,7 +345,7 @@ async function deactivateSchool(req, res) {
     } catch (err) {
         await client.query('ROLLBACK');
         client.release();
-        console.error('deactivateSchool error:', err);
+        logger.error('deactivateSchool error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to deactivate school', 500, err.message);
     }
 }
@@ -390,7 +391,7 @@ async function reactivateSchool(req, res) {
         return success(res, { school: result.rows[0] }, 'School reactivated successfully');
 
     } catch (err) {
-        console.error('reactivateSchool error:', err);
+        logger.error('reactivateSchool error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to reactivate school', 500, err.message);
     }
 }
@@ -480,7 +481,7 @@ async function createSchoolAdmin(req, res) {
         return success(res, { admin: result.rows[0] }, 'School Admin created successfully', 201);
 
     } catch (err) {
-        console.error('createSchoolAdmin error:', err);
+        logger.error('createSchoolAdmin error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to create School Admin', 500, err.message);
     }
 }

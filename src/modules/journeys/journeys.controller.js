@@ -11,6 +11,7 @@
 const { success, error } = require('../../utils/response');
 const { parsePagination, paginationMeta } = require('../../utils/pagination');
 const journeyService = require('./journeys.service');
+const logger = require('../../config/logger');
 
 // =============================================================================
 // startPickup — POST /api/journeys/start-pickup
@@ -29,7 +30,7 @@ async function startPickup(req, res) {
 
         return success(res, { journey: result.journey }, 'Pickup journey started', 201);
     } catch (err) {
-        console.error('startPickup error:', err);
+        logger.error('startPickup error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -51,7 +52,7 @@ async function arrivedSchool(req, res) {
 
         return success(res, { journey: result.journey }, 'Arrived at school');
     } catch (err) {
-        console.error('arrivedSchool error:', err);
+        logger.error('arrivedSchool error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -73,7 +74,7 @@ async function startDrop(req, res) {
 
         return success(res, { journey: result.journey }, 'Drop journey started', 201);
     } catch (err) {
-        console.error('startDrop error:', err);
+        logger.error('startDrop error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -95,7 +96,7 @@ async function endJourney(req, res) {
 
         return success(res, { journey: result.journey }, 'Journey completed');
     } catch (err) {
-        console.error('endJourney error:', err);
+        logger.error('endJourney error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -113,7 +114,7 @@ async function myToday(req, res) {
 
         return success(res, { journeys: result.journeys }, 'Today\'s journeys retrieved');
     } catch (err) {
-        console.error('myToday error:', err);
+        logger.error('myToday error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -136,7 +137,7 @@ async function todayJourneys(req, res) {
 
         return success(res, { journeys: result.journeys }, 'Today\'s journeys retrieved');
     } catch (err) {
-        console.error('todayJourneys error:', err);
+        logger.error('todayJourneys error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -163,7 +164,7 @@ async function getJourney(req, res) {
 
         return success(res, { journey }, 'Journey retrieved');
     } catch (err) {
-        console.error('getJourney error:', err);
+        logger.error('getJourney error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -210,7 +211,7 @@ async function journeyHistory(req, res) {
             pagination: paginationMeta(result.total, limit, page),
         }, 'Journey history retrieved');
     } catch (err) {
-        console.error('journeyHistory error:', err);
+        logger.error('journeyHistory error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }

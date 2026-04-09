@@ -11,6 +11,7 @@ require('dotenv').config();
 const express = require('express');
 const path    = require('path');
 const fs      = require('fs');
+const logger  = require('./config/logger');
 
 const { initOTPStore } = require('./modules/otp/otpStore');
 
@@ -40,14 +41,32 @@ app.use((_req, res, next) => {
     next();
 });
 
-// --- Request logger (development only) ---
-if (NODE_ENV === 'development') {
-    app.use((req, _res, next) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}]  ${req.method}  ${req.path}`);
-        next();
+// --- HTTP request logger ---
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        const meta = {
+            method: req.method,
+            path: req.originalUrl,
+            status: res.statusCode,
+            durationMs: duration,
+        };
+        if (req.user) {
+            meta.userId = req.user.userId;
+            meta.schoolId = req.user.school_id;
+        }
+        // Use warn level for 4xx/5xx, info for success
+        if (res.statusCode >= 500) {
+            logger.error('HTTP request', meta);
+        } else if (res.statusCode >= 400) {
+            logger.warn('HTTP request', meta);
+        } else {
+            logger.info('HTTP request', meta);
+        }
     });
-}
+    next();
+});
 
 // =============================================================================
 // Health check
@@ -89,9 +108,9 @@ futureModules.forEach(({ path: routePath, file }) => {
         // Only mount if the file exports a valid middleware / router function
         if (typeof mod === 'function') {
             app.use(routePath, mod);
-            console.log(`✅ Mounted ${routePath}`);
+            logger.info('Route mounted', { path: routePath });
         } else {
-            console.log(`⚠️  Skipped ${routePath} (not a valid router yet)`);
+            logger.warn('Route skipped (not a valid router)', { path: routePath });
         }
     }
 });
@@ -110,7 +129,7 @@ app.use((_req, res) => {
 // Global error handler (must have 4 parameters for Express to recognise it)
 // =============================================================================
 app.use((err, _req, res, _next) => {
-    console.error('❌ Unhandled error:', err.stack || err.message || err);
+    logger.error('Unhandled error', { error: err.message, stack: err.stack });
 
     const statusCode = err.statusCode || 500;
     const message =
@@ -132,27 +151,20 @@ async function start() {
     try {
         // Ensure OTP store table exists
         await initOTPStore();
-        console.log('✅ OTP store initialised');
+        logger.info('OTP store initialised');
 
         // Trigger SMTP verification (mailer.js self-verifies on require)
         require('./config/mailer');
 
         app.listen(PORT, () => {
-            console.log('');
-            console.log('🚌 ═══════════════════════════════════════════');
-            console.log('🚌  BusTrack API Server');
-            console.log(`🚌  Environment : ${NODE_ENV}`);
-            console.log(`🚌  Port        : ${PORT}`);
-            console.log(`🚌  Health      : http://localhost:${PORT}/health`);
-            console.log('🚌 ═══════════════════════════════════════════');
-            console.log('');
+            logger.info('BusTrack API Server started', { environment: NODE_ENV, port: PORT, health: `http://localhost:${PORT}/health` });
 
             // Start the RabbitMQ notification worker
             const { startWorker } = require('./workers/notificationWorker');
-            try { startWorker(); } catch (err) { console.error('Worker failed to start:', err); }
+            try { startWorker(); } catch (err) { logger.error('Worker failed to start', { error: err.message }); }
         });
     } catch (err) {
-        console.error('❌ Failed to start server:', err);
+        logger.error('Failed to start server', { error: err.message, stack: err.stack });
         process.exit(1);
     }
 }

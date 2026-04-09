@@ -9,6 +9,7 @@
 
 const pool = require('../../config/db');
 const admin = require('../../config/firebase');
+const logger = require('../../config/logger');
 
 // Firebase Realtime Database reference
 const db = admin.database();
@@ -146,7 +147,7 @@ async function processLocationUpdate(driverId, schoolId, body) {
 
     db.ref(`schools/${journey.school_id}/buses/${journey.bus_id}/location`)
         .set(firebasePayload)
-        .catch(err => console.error('Firebase write failed:', err));
+        .catch(err => logger.error('Firebase write failed', { error: err.message }));
 
     // 7. Return success data
     return {

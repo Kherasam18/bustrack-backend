@@ -25,6 +25,7 @@ const { signToken, sign2FAToken } = require('../../utils/jwt');
 const { success, error } = require('../../utils/response');
 const { issueOTP, consumeOTP } = require('../otp/otpStore');
 const { sendEmailOTP } = require('../../utils/otp');
+const logger = require('../../config/logger');
 
 // -----------------------------------------------------------------------------
 // POST /auth/school-admin/login  — Step 1
@@ -84,7 +85,7 @@ async function login(req, res) {
         }, 'Password verified. Please enter your OTP.');
 
     } catch (err) {
-        console.error('SchoolAdmin login error:', err);
+        logger.error('SchoolAdmin login error', { error: err.message, stack: err.stack });
         return error(res, 'Login failed', 500, err.message);
     }
 }
@@ -125,7 +126,7 @@ async function verifyOTP(req, res) {
         }, 'Login successful');
 
     } catch (err) {
-        console.error('SchoolAdmin verifyOTP error:', err);
+        logger.error('SchoolAdmin verifyOTP error', { error: err.message, stack: err.stack });
         return error(res, 'OTP verification failed', 500, err.message);
     }
 }
@@ -158,7 +159,7 @@ async function forgotPassword(req, res) {
         return success(res, {}, 'Password reset code sent to your email.');
 
     } catch (err) {
-        console.error('SchoolAdmin forgotPassword error:', err);
+        logger.error('SchoolAdmin forgotPassword error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to send reset code', 500, err.message);
     }
 }
@@ -203,7 +204,7 @@ async function resetPassword(req, res) {
         return success(res, {}, 'Password reset successfully. Please log in.');
 
     } catch (err) {
-        console.error('SchoolAdmin resetPassword error:', err);
+        logger.error('SchoolAdmin resetPassword error', { error: err.message, stack: err.stack });
         return error(res, 'Password reset failed', 500, err.message);
     }
 }

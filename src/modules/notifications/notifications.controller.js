@@ -11,6 +11,7 @@
 const { success, error } = require('../../utils/response');
 const { isValidUUID } = require('../journeys/journeys.service');
 const notificationsService = require('./notifications.service');
+const logger = require('../../config/logger');
 
 // =============================================================================
 // getNotifications — GET /api/notifications
@@ -37,7 +38,7 @@ async function getNotifications(req, res) {
             unread_count: result.unread_count,
         }, 'Notifications retrieved');
     } catch (err) {
-        console.error('getNotifications error:', err);
+        logger.error('getNotifications error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -65,7 +66,7 @@ async function markAsRead(req, res) {
 
         return success(res, { id: result.id, is_read: result.is_read }, 'Notification marked as read');
     } catch (err) {
-        console.error('markAsRead error:', err);
+        logger.error('markAsRead error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -83,7 +84,7 @@ async function markAllAsRead(req, res) {
 
         return success(res, { updated: result.updated }, 'All notifications marked as read');
     } catch (err) {
-        console.error('markAllAsRead error:', err);
+        logger.error('markAllAsRead error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }
@@ -109,7 +110,7 @@ async function getSchoolNotificationsToday(req, res) {
             total: result.total,
         }, 'School notifications retrieved');
     } catch (err) {
-        console.error('getSchoolNotificationsToday error:', err);
+        logger.error('getSchoolNotificationsToday error', { error: err.message, stack: err.stack });
         return error(res, 'Internal server error', 500);
     }
 }

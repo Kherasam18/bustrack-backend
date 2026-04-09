@@ -20,6 +20,7 @@ const { signToken } = require('../../utils/jwt');
 const { success, error } = require('../../utils/response');
 const { issueOTP, consumeOTP } = require('../otp/otpStore');
 const { sendPhoneOTP } = require('../../utils/otp');
+const logger = require('../../config/logger');
 
 // -----------------------------------------------------------------------------
 // POST /auth/parent/login
@@ -100,7 +101,7 @@ async function login(req, res) {
         }, 'Login successful');
 
     } catch (err) {
-        console.error('Parent login error:', err);
+        logger.error('Parent login error', { error: err.message, stack: err.stack });
         return error(res, 'Login failed', 500, err.message);
     }
 }
@@ -144,7 +145,7 @@ async function changePassword(req, res) {
         return success(res, {}, 'Password changed successfully');
 
     } catch (err) {
-        console.error('Parent changePassword error:', err);
+        logger.error('Parent changePassword error', { error: err.message, stack: err.stack });
         return error(res, 'Password change failed', 500, err.message);
     }
 }
@@ -185,7 +186,7 @@ async function forgotPasswordSendOTP(req, res) {
         }, 'OTP sent to your registered phone number.');
 
     } catch (err) {
-        console.error('Parent forgotPassword sendOTP error:', err);
+        logger.error('Parent forgotPassword sendOTP error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to send OTP', 500, err.message);
     }
 }
@@ -242,7 +243,7 @@ async function forgotPasswordVerifyOTP(req, res) {
         return success(res, { resetToken: shortToken }, 'OTP verified. You may now reset your password.');
 
     } catch (err) {
-        console.error('Parent forgotPassword verifyOTP error:', err);
+        logger.error('Parent forgotPassword verifyOTP error', { error: err.message, stack: err.stack });
         return error(res, 'OTP verification failed', 500, err.message);
     }
 }
@@ -285,7 +286,7 @@ async function forgotPasswordReset(req, res) {
         return success(res, {}, 'Password reset successfully. Please log in.');
 
     } catch (err) {
-        console.error('Parent forgotPassword reset error:', err);
+        logger.error('Parent forgotPassword reset error', { error: err.message, stack: err.stack });
         return error(res, 'Password reset failed', 500, err.message);
     }
 }

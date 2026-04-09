@@ -7,6 +7,7 @@
 // =============================================================================
 
 const amqplib = require('amqplib');
+const logger = require('./logger');
 
 let connection = null;
 let channel = null;
@@ -23,17 +24,17 @@ async function getRabbitMQChannel() {
     connection = await amqplib.connect(url);
     channel = await connection.createChannel();
 
-    console.log('RabbitMQ connected');
+    logger.info('RabbitMQ connected');
 
     // Reset module-level refs when the connection closes unexpectedly
     connection.on('close', () => {
-        console.log('RabbitMQ connection closed');
+        logger.warn('RabbitMQ connection closed');
         connection = null;
         channel = null;
     });
 
     connection.on('error', (err) => {
-        console.error('RabbitMQ connection error:', err.message);
+        logger.error('RabbitMQ connection error', { error: err.message });
         connection = null;
         channel = null;
     });

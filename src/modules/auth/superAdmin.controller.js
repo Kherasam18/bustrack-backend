@@ -14,6 +14,7 @@ const { signToken } = require('../../utils/jwt');
 const { success, error } = require('../../utils/response');
 const { issueOTP, consumeOTP } = require('../otp/otpStore');
 const { sendEmailOTP } = require('../../utils/otp');
+const logger = require('../../config/logger');
 
 // -----------------------------------------------------------------------------
 // POST /auth/super-admin/login
@@ -71,7 +72,7 @@ async function login(req, res) {
         }, 'Login successful');
 
     } catch (err) {
-        console.error('SuperAdmin login error:', err);
+        logger.error('SuperAdmin login error', { error: err.message, stack: err.stack });
         return error(res, 'Login failed', 500, err.message);
     }
 }
@@ -106,7 +107,7 @@ async function forgotPassword(req, res) {
         return success(res, {}, 'Password reset code sent to your email.');
 
     } catch (err) {
-        console.error('SuperAdmin forgotPassword error:', err);
+        logger.error('SuperAdmin forgotPassword error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to send reset code', 500, err.message);
     }
 }
@@ -152,7 +153,7 @@ async function resetPassword(req, res) {
         return success(res, {}, 'Password reset successfully. Please log in.');
 
     } catch (err) {
-        console.error('SuperAdmin resetPassword error:', err);
+        logger.error('SuperAdmin resetPassword error', { error: err.message, stack: err.stack });
         return error(res, 'Password reset failed', 500, err.message);
     }
 }

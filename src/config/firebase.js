@@ -11,6 +11,7 @@
 // =============================================================================
 
 const admin = require('firebase-admin');
+const logger = require('./logger');
 
 // Prevent double-initialisation (e.g. during hot-reload in development)
 if (!admin.apps.length) {
@@ -31,7 +32,7 @@ if (!admin.apps.length) {
     }
 
     admin.initializeApp(initOptions);
-    console.log('✅ Firebase Admin initialised');
+    logger.info('Firebase Admin initialised');
 }
 
 module.exports = admin;

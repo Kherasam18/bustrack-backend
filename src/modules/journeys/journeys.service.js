@@ -9,6 +9,7 @@
 
 const pool = require('../../config/db');
 const notificationsService = require('../notifications/notifications.service');
+const logger = require('../../config/logger');
 
 // UUID format validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -171,7 +172,7 @@ async function startPickup(driverId, schoolId) {
     // Fire-and-forget notification — never block the journey action
     notificationsService.queueJourneyNotification(
         result.rows[0].id, 'PICKUP_STARTED', schoolId
-    ).catch(err => console.error('Notification queue error (startPickup):', err));
+    ).catch(err => logger.error('Notification queue error (startPickup)', { error: err.message }));
 
     return { journey: result.rows[0] };
 }
@@ -211,7 +212,7 @@ async function arrivedSchool(driverId, schoolId) {
     // Fire-and-forget notification — never block the journey action
     notificationsService.queueJourneyNotification(
         result.rows[0].id, 'ARRIVED_SCHOOL', schoolId
-    ).catch(err => console.error('Notification queue error (arrivedSchool):', err));
+    ).catch(err => logger.error('Notification queue error (arrivedSchool)', { error: err.message }));
 
     return { journey: result.rows[0] };
 }
@@ -250,7 +251,7 @@ async function startDrop(driverId, schoolId) {
     // Fire-and-forget notification — never block the journey action
     notificationsService.queueJourneyNotification(
         result.rows[0].id, 'DROP_STARTED', schoolId
-    ).catch(err => console.error('Notification queue error (startDrop):', err));
+    ).catch(err => logger.error('Notification queue error (startDrop)', { error: err.message }));
 
     return { journey: result.rows[0] };
 }
@@ -290,7 +291,7 @@ async function endJourney(driverId, schoolId) {
     // Fire-and-forget notification — never block the journey action
     notificationsService.queueJourneyNotification(
         result.rows[0].id, 'JOURNEY_ENDED', schoolId
-    ).catch(err => console.error('Notification queue error (endJourney):', err));
+    ).catch(err => logger.error('Notification queue error (endJourney)', { error: err.message }));
 
     return { journey: result.rows[0] };
 }

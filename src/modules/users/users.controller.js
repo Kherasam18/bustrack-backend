@@ -13,6 +13,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../../config/db');
 const { success, error } = require('../../utils/response');
 const { parsePagination, paginationMeta } = require('../../utils/pagination');
+const logger = require('../../config/logger');
 
 // Regex for UUID validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -92,7 +93,7 @@ async function createDriver(req, res) {
         return success(res, { driver: result.rows[0] }, 'Driver created successfully', 201);
 
     } catch (err) {
-        console.error('createDriver error:', err);
+        logger.error('createDriver error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to create driver', 500, err.message);
     }
 }
@@ -153,7 +154,7 @@ async function listDrivers(req, res) {
         }, 'Drivers retrieved successfully');
 
     } catch (err) {
-        console.error('listDrivers error:', err);
+        logger.error('listDrivers error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve drivers', 500, err.message);
     }
 }
@@ -187,7 +188,7 @@ async function getDriver(req, res) {
         return success(res, { driver: result.rows[0] }, 'Driver retrieved successfully');
 
     } catch (err) {
-        console.error('getDriver error:', err);
+        logger.error('getDriver error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve driver', 500, err.message);
     }
 }
@@ -272,7 +273,7 @@ async function updateDriver(req, res) {
         return success(res, { driver: result.rows[0] }, 'Driver updated successfully');
 
     } catch (err) {
-        console.error('updateDriver error:', err);
+        logger.error('updateDriver error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to update driver', 500, err.message);
     }
 }
@@ -313,7 +314,7 @@ async function deactivateDriver(req, res) {
         return success(res, { userId }, 'Driver deactivated successfully');
 
     } catch (err) {
-        console.error('deactivateDriver error:', err);
+        logger.error('deactivateDriver error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to deactivate driver', 500, err.message);
     }
 }
@@ -356,7 +357,7 @@ async function reactivateDriver(req, res) {
         return success(res, { driver: result.rows[0] }, 'Driver reactivated successfully');
 
     } catch (err) {
-        console.error('reactivateDriver error:', err);
+        logger.error('reactivateDriver error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to reactivate driver', 500, err.message);
     }
 }
@@ -409,7 +410,7 @@ async function resetDriverPassword(req, res) {
         return success(res, {}, 'Driver password reset successfully');
 
     } catch (err) {
-        console.error('resetDriverPassword error:', err);
+        logger.error('resetDriverPassword error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to reset driver password', 500, err.message);
     }
 }
@@ -494,7 +495,7 @@ async function createParent(req, res) {
         }, 'Parent created successfully', 201);
 
     } catch (err) {
-        console.error('createParent error:', err);
+        logger.error('createParent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to create parent', 500, err.message);
     }
 }
@@ -555,7 +556,7 @@ async function listParents(req, res) {
         }, 'Parents retrieved successfully');
 
     } catch (err) {
-        console.error('listParents error:', err);
+        logger.error('listParents error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve parents', 500, err.message);
     }
 }
@@ -605,7 +606,7 @@ async function getParent(req, res) {
         }, 'Parent retrieved successfully');
 
     } catch (err) {
-        console.error('getParent error:', err);
+        logger.error('getParent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to retrieve parent', 500, err.message);
     }
 }
@@ -702,7 +703,7 @@ async function updateParent(req, res) {
         return success(res, { parent: result.rows[0] }, 'Parent updated successfully');
 
     } catch (err) {
-        console.error('updateParent error:', err);
+        logger.error('updateParent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to update parent', 500, err.message);
     }
 }
@@ -743,7 +744,7 @@ async function deactivateParent(req, res) {
         return success(res, { userId }, 'Parent deactivated successfully');
 
     } catch (err) {
-        console.error('deactivateParent error:', err);
+        logger.error('deactivateParent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to deactivate parent', 500, err.message);
     }
 }
@@ -786,7 +787,7 @@ async function reactivateParent(req, res) {
         return success(res, { parent: result.rows[0] }, 'Parent reactivated successfully');
 
     } catch (err) {
-        console.error('reactivateParent error:', err);
+        logger.error('reactivateParent error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to reactivate parent', 500, err.message);
     }
 }
@@ -851,7 +852,7 @@ async function resetParentPassword(req, res) {
         }, 'Parent password reset to default successfully');
 
     } catch (err) {
-        console.error('resetParentPassword error:', err);
+        logger.error('resetParentPassword error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to reset parent password', 500, err.message);
     }
 }
