@@ -162,6 +162,10 @@ async function start() {
             // Start the RabbitMQ notification worker
             const { startWorker } = require('./workers/notificationWorker');
             try { startWorker(); } catch (err) { logger.error('Worker failed to start', { error: err.message }); }
+
+            // Start the late-start detection cron job
+            const { startDetectLateStart } = require('./jobs/detectLateStart');
+            try { startDetectLateStart(); } catch (err) { logger.error('detectLateStart cron failed to start', { error: err.message }); }
         });
     } catch (err) {
         logger.error('Failed to start server', { error: err.message, stack: err.stack });
