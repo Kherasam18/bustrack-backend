@@ -166,6 +166,10 @@ async function start() {
             // Start the late-start detection cron job
             const { startDetectLateStart } = require('./jobs/detectLateStart');
             try { startDetectLateStart(); } catch (err) { logger.error('detectLateStart cron failed to start', { error: err.message }); }
+
+            // Start the GPS tracking status degradation cron job
+            const { startUpdateTrackingStatus } = require('./jobs/updateTrackingStatus');
+            try { startUpdateTrackingStatus(); } catch (err) { logger.error('updateTrackingStatus cron failed to start', { error: err.message }); }
         });
     } catch (err) {
         logger.error('Failed to start server', { error: err.message, stack: err.stack });
