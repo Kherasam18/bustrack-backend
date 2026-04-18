@@ -170,12 +170,12 @@ async function start() {
                 const { startDetectLateStart } = require('./jobs/detectLateStart');
                 const { startUpdateTrackingStatus } = require('./jobs/updateTrackingStatus');
                 const { startExpireJourneys } = require('./jobs/expireJourneys');
-                // TODO: Phase 5d — const { startClearNotifications } = require('./jobs/clearNotifications');
+                const { startClearNotifications } = require('./jobs/clearNotifications');
 
                 try { startDetectLateStart(); }       catch (err) { logger.error('Failed to start detectLateStart', { error: err.message }); }
                 try { startUpdateTrackingStatus(); }  catch (err) { logger.error('Failed to start updateTrackingStatus', { error: err.message }); }
                 try { startExpireJourneys(); }        catch (err) { logger.error('Failed to start expireJourneys', { error: err.message }); }
-                // TODO: Phase 5d — try { startClearNotifications(); } catch (err) { logger.error('Failed to start clearNotifications', { error: err.message }); }
+                try { startClearNotifications(); }    catch (err) { logger.error('Failed to start clearNotifications', { error: err.message }); }
 
                 logger.info('Maintenance cron jobs started');
             } else {
