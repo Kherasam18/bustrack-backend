@@ -170,6 +170,10 @@ async function start() {
             // Start the GPS tracking status degradation cron job
             const { startUpdateTrackingStatus } = require('./jobs/updateTrackingStatus');
             try { startUpdateTrackingStatus(); } catch (err) { logger.error('updateTrackingStatus cron failed to start', { error: err.message }); }
+
+            // Start the journey auto-expiry cron job
+            const { startExpireJourneys } = require('./jobs/expireJourneys');
+            try { startExpireJourneys(); } catch (err) { logger.error('expireJourneys cron failed to start', { error: err.message }); }
         });
     } catch (err) {
         logger.error('Failed to start server', { error: err.message, stack: err.stack });
