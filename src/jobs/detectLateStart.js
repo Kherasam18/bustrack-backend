@@ -276,7 +276,7 @@ async function detectLateStart() {
 // =============================================================================
 function startDetectLateStart() {
     // Every 5 minutes, between 6 AM and 9 PM only
-    cron.schedule('*/5 6-21 * * *', detectLateStart);
+    cron.schedule('*/5 6-21 * * *', detectLateStart, { timezone: 'Asia/Kolkata' });
     logger.info('detectLateStart: cron registered (*/5 6-21 * * *)');
 }
 

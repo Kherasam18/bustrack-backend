@@ -23,8 +23,7 @@ async function clearNotifications() {
     try {
         const result = await pool.query(
             `DELETE FROM notifications
-             WHERE created_at < CURRENT_DATE
-             RETURNING id`
+             WHERE created_at < CURRENT_DATE`
         );
 
         logger.info('clearNotifications: job completed', { deleted: result.rowCount });
@@ -38,7 +37,7 @@ async function clearNotifications() {
 // =============================================================================
 function startClearNotifications() {
     // Once daily at 23:59
-    cron.schedule('59 23 * * *', clearNotifications);
+    cron.schedule('59 23 * * *', clearNotifications, { timezone: 'Asia/Kolkata' });
     logger.info('clearNotifications: cron registered (59 23 * * *)');
 }
 
