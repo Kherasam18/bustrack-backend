@@ -21,6 +21,35 @@ const logger = require('../config/logger');
 
 const QUEUE_NAME = 'bustrack.notifications';
 
+// Maximum concurrent per-journey processing tasks — sized to stay within
+// the default pg pool of 10 connections (bulk UPDATE uses one, leaves room)
+const CONCURRENCY_LIMIT = 5;
+
+// =============================================================================
+// runWithConcurrency — Runs async task functions with a maximum concurrency cap.
+// Returns an array of { status, value/reason } objects matching Promise.allSettled.
+// =============================================================================
+async function runWithConcurrency(tasks, concurrency) {
+    const results = [];
+    let index = 0;
+
+    async function worker() {
+        while (index < tasks.length) {
+            const current = index++;
+            try {
+                const value = await tasks[current]();
+                results[current] = { status: 'fulfilled', value };
+            } catch (reason) {
+                results[current] = { status: 'rejected', reason };
+            }
+        }
+    }
+
+    const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, worker);
+    await Promise.all(workers);
+    return results;
+}
+
 // =============================================================================
 // bulkUpdateTrackingStatus — Single-statement bulk UPDATE with CASE expression
 // =============================================================================
@@ -47,28 +76,13 @@ async function bulkUpdateTrackingStatus() {
 }
 
 // =============================================================================
-// hasUnresolvedFlag — Checks if an unresolved flag of the given type exists
-// =============================================================================
-async function hasUnresolvedFlag(client, journeyId, flagType) {
-    const result = await client.query(
-        `SELECT 1 FROM journey_flags
-         WHERE journey_id = $1::uuid
-           AND type = $2
-           AND resolved_at IS NULL
-         LIMIT 1`,
-        [journeyId, flagType]
-    );
-
-    return result.rowCount > 0;
-}
-
-// =============================================================================
-// insertFlag — Inserts a journey_flag of the given type
+// insertFlag — Inserts a journey_flag with ON CONFLICT DO NOTHING (atomic guard)
 // =============================================================================
 async function insertFlag(client, schoolId, journeyId, flagType) {
     await client.query(
         `INSERT INTO journey_flags (id, school_id, journey_id, type, created_at, updated_at)
-         VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, NOW(), NOW())`,
+         VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, NOW(), NOW())
+         ON CONFLICT DO NOTHING`,
         [schoolId, journeyId, flagType]
     );
 }
@@ -167,14 +181,26 @@ async function processWeakJourney(journey) {
     try {
         client = await pool.connect();
 
-        // Duplicate flag guard
-        if (await hasUnresolvedFlag(client, journeyId, 'GPS_WEAK')) {
-            return { flagInserted: false };
-        }
-
         await client.query('BEGIN');
 
         try {
+            // Re-check for unresolved flag inside the transaction (atomic with insert)
+            const existing = await client.query(
+                `SELECT 1 FROM journey_flags
+                 WHERE journey_id = $1::uuid
+                   AND type = 'GPS_WEAK'
+                   AND resolved_at IS NULL
+                 LIMIT 1`,
+                [journeyId]
+            );
+
+            if (existing.rowCount > 0) {
+                await client.query('ROLLBACK');
+                return { flagInserted: false };
+            }
+
+            // Use INSERT ... ON CONFLICT DO NOTHING with the partial unique index
+            // idx_journey_flags_unresolved_unique (journey_id, type) WHERE resolved_at IS NULL
             await insertFlag(client, schoolId, journeyId, 'GPS_WEAK');
             await client.query('COMMIT');
 
@@ -214,12 +240,7 @@ async function processLostJourney(journey) {
     try {
         client = await pool.connect();
 
-        // Duplicate flag guard
-        if (await hasUnresolvedFlag(client, journeyId, 'GPS_LOST')) {
-            return { flagInserted: false, notificationSent: false };
-        }
-
-        // Fetch details needed for notification
+        // Fetch details needed for notification (read-only, before transaction)
         const schoolAdminId = await findSchoolAdmin(client, schoolId);
         if (!schoolAdminId) {
             logger.warn('updateTrackingStatus: no active School Admin found', { schoolId, journeyId });
@@ -241,6 +262,23 @@ async function processLostJourney(journey) {
         await client.query('BEGIN');
 
         try {
+            // Re-check for unresolved flag inside the transaction (atomic with insert)
+            const existing = await client.query(
+                `SELECT 1 FROM journey_flags
+                 WHERE journey_id = $1::uuid
+                   AND type = 'GPS_LOST'
+                   AND resolved_at IS NULL
+                 LIMIT 1`,
+                [journeyId]
+            );
+
+            if (existing.rowCount > 0) {
+                await client.query('ROLLBACK');
+                return { flagInserted: false, notificationSent: false };
+            }
+
+            // Use INSERT ... ON CONFLICT DO NOTHING with the partial unique index
+            // idx_journey_flags_unresolved_unique (journey_id, type) WHERE resolved_at IS NULL
             await insertFlag(client, schoolId, journeyId, 'GPS_LOST');
 
             let notificationId = null;
@@ -320,13 +358,14 @@ async function updateTrackingStatus() {
             weakCount: weakJourneys.length,
         });
 
-        // Steps 3–5 — Process WEAK and LOST journeys in parallel with failure isolation
-        const allPromises = [
-            ...weakJourneys.map(j => processWeakJourney(j)),
-            ...lostJourneys.map(j => processLostJourney(j)),
+        // Steps 3–5 — Process WEAK and LOST journeys with concurrency cap
+        // Tasks are thunks (functions returning promises), not pre-started promises
+        const tasks = [
+            ...weakJourneys.map(j => () => processWeakJourney(j)),
+            ...lostJourneys.map(j => () => processLostJourney(j)),
         ];
 
-        const results = await Promise.allSettled(allPromises);
+        const results = await runWithConcurrency(tasks, CONCURRENCY_LIMIT);
 
         // Tally results
         for (const result of results) {

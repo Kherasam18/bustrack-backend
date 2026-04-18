@@ -141,9 +141,10 @@ async function processLocationUpdate(driverId, schoolId, body) {
             `UPDATE journey_flags
              SET resolved_at = NOW(), updated_at = NOW()
              WHERE journey_id = $1::uuid
+               AND school_id = $2::uuid
                AND type IN ('GPS_WEAK', 'GPS_LOST')
                AND resolved_at IS NULL`,
-            [journey_id]
+            [journey_id, journey.school_id]
         );
 
         if (flagResult.rowCount > 0) {

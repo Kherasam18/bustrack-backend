@@ -159,21 +159,30 @@ async function start() {
         app.listen(PORT, () => {
             logger.info('BusTrack API Server started', { environment: NODE_ENV, port: PORT, health: `http://localhost:${PORT}/health` });
 
-            // Start the RabbitMQ notification worker
+            // Notification worker always runs on every instance
             const { startWorker } = require('./workers/notificationWorker');
-            try { startWorker(); } catch (err) { logger.error('Worker failed to start', { error: err.message }); }
+            try { startWorker(); } catch (err) { logger.error('Failed to start notification worker', { error: err.message }); }
 
-            // Start the late-start detection cron job
-            const { startDetectLateStart } = require('./jobs/detectLateStart');
-            try { startDetectLateStart(); } catch (err) { logger.error('detectLateStart cron failed to start', { error: err.message }); }
+            // Maintenance crons run only on the instance where RUN_MAINTENANCE_CRONS=true
+            // In single-instance deployments: set RUN_MAINTENANCE_CRONS=true in .env
+            // In multi-instance deployments: set it true on exactly one instance only
+            if (process.env.RUN_MAINTENANCE_CRONS === 'true') {
+                const { startDetectLateStart } = require('./jobs/detectLateStart');
+                const { startUpdateTrackingStatus } = require('./jobs/updateTrackingStatus');
+                const { startExpireJourneys } = require('./jobs/expireJourneys');
+                // TODO: Phase 5d — const { startClearNotifications } = require('./jobs/clearNotifications');
 
-            // Start the GPS tracking status degradation cron job
-            const { startUpdateTrackingStatus } = require('./jobs/updateTrackingStatus');
-            try { startUpdateTrackingStatus(); } catch (err) { logger.error('updateTrackingStatus cron failed to start', { error: err.message }); }
+                try { startDetectLateStart(); }       catch (err) { logger.error('Failed to start detectLateStart', { error: err.message }); }
+                try { startUpdateTrackingStatus(); }  catch (err) { logger.error('Failed to start updateTrackingStatus', { error: err.message }); }
+                try { startExpireJourneys(); }        catch (err) { logger.error('Failed to start expireJourneys', { error: err.message }); }
+                // TODO: Phase 5d — try { startClearNotifications(); } catch (err) { logger.error('Failed to start clearNotifications', { error: err.message }); }
 
-            // Start the journey auto-expiry cron job
-            const { startExpireJourneys } = require('./jobs/expireJourneys');
-            try { startExpireJourneys(); } catch (err) { logger.error('expireJourneys cron failed to start', { error: err.message }); }
+                logger.info('Maintenance cron jobs started');
+            } else {
+                logger.info('Maintenance cron jobs skipped (RUN_MAINTENANCE_CRONS not set)');
+            }
+
+            logger.info(`Server running on port ${PORT}`);
         });
     } catch (err) {
         logger.error('Failed to start server', { error: err.message, stack: err.stack });
