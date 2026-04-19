@@ -11,6 +11,7 @@ require('dotenv').config();
 const express = require('express');
 const path    = require('path');
 const fs      = require('fs');
+const cors    = require('cors');
 const logger  = require('./config/logger');
 
 const { initOTPStore } = require('./modules/otp/otpStore');
@@ -24,8 +25,51 @@ const PORT = parseInt(process.env.PORT, 10) || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // =============================================================================
+// CORS configuration
+// -----------------------------------------------------------------------------
+// Allowed origins are built from the CORS_ORIGINS environment variable
+// (comma-separated list) merged with hardcoded development fallbacks.
+//
+// To add a new origin, append it to CORS_ORIGINS in your .env file:
+//   CORS_ORIGINS=http://localhost:5173,http://localhost:3000,https://app.bustrack.io
+//
+// The origin callback also allows requests with no Origin header (e.g. curl,
+// Postman, server-to-server calls, health checks) so tooling is never blocked.
+// =============================================================================
+
+// Hardcoded fallback origins for local development
+const DEV_ORIGINS = ['http://localhost:5173', 'http://localhost:3000'];
+
+// Parse CORS_ORIGINS env var into an array (empty array if not set)
+const envOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : [];
+
+// Deduplicate merged origins
+const allowedOrigins = [...new Set([...DEV_ORIGINS, ...envOrigins])];
+
+logger.info('CORS allowed origins', { origins: allowedOrigins });
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no Origin header (curl, Postman, server-to-server)
+        if (!origin) return callback(null, true);
+        // Check against the allowed list
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    optionsSuccessStatus: 200,
+};
+
+// =============================================================================
 // Global middleware
 // =============================================================================
+
+// --- CORS ---
+app.use(cors(corsOptions));
 
 // --- Body parsers ---
 app.use(express.json({ limit: '10mb' }));

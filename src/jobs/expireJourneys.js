@@ -38,7 +38,7 @@ async function bulkExpireJourneys() {
            updated_at = NOW()
          WHERE
            status IN ('PICKUP_STARTED', 'DROP_STARTED')
-           AND started_at < NOW() - (INTERVAL '1 hour' * $1)
+           AND started_at < NOW() - INTERVAL '${EXPIRY_HOURS} hours'
          RETURNING
            id            AS journey_id,
            school_id,
@@ -46,8 +46,7 @@ async function bulkExpireJourneys() {
            status        AS new_status,
            journey_type,
            started_at,
-           ended_at`,
-        [EXPIRY_HOURS]
+           ended_at`
     );
 
     return result.rows;
@@ -65,17 +64,16 @@ async function insertSessionExpiredFlag(client, schoolId, journeyId) {
 }
 
 // =============================================================================
-// resolveOpenGpsFlags — Resolves open GPS_WEAK and GPS_LOST flags for a journey when it expires
+// resolveOpenGpsFlags — Resolves any unresolved GPS_WEAK or GPS_LOST flags for a journey
 // =============================================================================
-async function resolveOpenGpsFlags(client, journeyId, schoolId) {
+async function resolveOpenGpsFlags(client, journeyId) {
     const result = await client.query(
         `UPDATE journey_flags
          SET resolved_at = NOW(), updated_at = NOW()
          WHERE journey_id = $1::uuid
-           AND school_id = $2::uuid
            AND type IN ('GPS_WEAK', 'GPS_LOST')
            AND resolved_at IS NULL`,
-        [journeyId, schoolId]
+        [journeyId]
     );
 
     return result.rowCount;
@@ -106,7 +104,7 @@ async function processExpiredJourney(row) {
             await insertSessionExpiredFlag(client, schoolId, journeyId);
 
             // Resolve any lingering GPS flags
-            await resolveOpenGpsFlags(client, journeyId, schoolId);
+            await resolveOpenGpsFlags(client, journeyId);
 
             await client.query('COMMIT');
         } catch (txErr) {
