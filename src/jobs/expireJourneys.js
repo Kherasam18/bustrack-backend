@@ -37,8 +37,8 @@ async function bulkExpireJourneys() {
            tracking_status = 'LOST'::tracking_status,
            updated_at = NOW()
          WHERE
-           status IN ('PICKUP_STARTED', 'DROP_STARTED')
-           AND started_at < NOW() - (INTERVAL '1 hour' * $1)
+            status IN ('PICKUP_STARTED', 'DROP_STARTED')
+           AND started_at < NOW() - make_interval(hours => $1::int)
          RETURNING
            id            AS journey_id,
            school_id,
@@ -65,7 +65,7 @@ async function insertSessionExpiredFlag(client, schoolId, journeyId) {
 }
 
 // =============================================================================
-// resolveOpenGpsFlags — Resolves open GPS_WEAK and GPS_LOST flags for a journey when it expires
+// resolveOpenGpsFlags — Resolves any unresolved GPS_WEAK or GPS_LOST flags for a journey
 // =============================================================================
 async function resolveOpenGpsFlags(client, journeyId, schoolId) {
     const result = await client.query(
