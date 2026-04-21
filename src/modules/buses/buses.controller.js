@@ -1434,18 +1434,21 @@ async function listBusStudents(req, res) {
         const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
         // Fetch students with optional stop info
-        // LEFT JOIN through the active route's stops to find the student's stop
         const result = await pool.query(
             `SELECT s.id, s.name, s.class, s.section, s.roll_no,
                     rs.stop_name, rs.stop_sequence
              FROM student_bus_assignments sba
-             JOIN students s ON s.id = sba.student_id
-             LEFT JOIN bus_routes br
-               ON br.bus_id = sba.bus_id AND br.is_active = TRUE
-             LEFT JOIN route_stops rs
-               ON rs.route_id = br.id
+             JOIN students s
+               ON s.id = sba.student_id
+             -- Join stop_students first to find the student's assigned stop
              LEFT JOIN stop_students ss
-               ON ss.stop_id = rs.id AND ss.student_id = s.id
+               ON ss.student_id = s.id
+             LEFT JOIN route_stops rs
+               ON rs.id = ss.stop_id
+              AND rs.route_id IN (
+                  SELECT id FROM bus_routes
+                  WHERE bus_id = $1 AND is_active = TRUE
+              )
              ${whereClause}
              ORDER BY s.class ASC, s.section ASC, s.roll_no ASC`,
             params
