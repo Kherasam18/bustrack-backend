@@ -45,18 +45,28 @@ const envOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
     : [];
 
-// Deduplicate merged origins
-const allowedOrigins = [...new Set([...DEV_ORIGINS, ...envOrigins])];
+// Merge envOrigins with DEV_ORIGINS only when not in production
+const allowedOrigins = [
+    ...envOrigins,
+    ...(process.env.NODE_ENV !== 'production' ? DEV_ORIGINS : []),
+];
 
-logger.info('CORS allowed origins', { origins: allowedOrigins });
+// Deduplicate merged origins
+const dedupedOrigins = [...new Set(allowedOrigins)];
+
+logger.info('CORS allowed origins', { origins: dedupedOrigins });
 
 const corsOptions = {
     origin: (origin, callback) => {
         // Allow requests with no Origin header (curl, Postman, server-to-server)
         if (!origin) return callback(null, true);
         // Check against the allowed list
-        if (allowedOrigins.includes(origin)) return callback(null, true);
-        return callback(new Error(`CORS: origin ${origin} not allowed`));
+        if (dedupedOrigins.includes(origin)) return callback(null, true);
+        
+        // Return 403 instead of 500 when CORS rejects an origin
+        const corsError = new Error('Not allowed by CORS');
+        corsError.statusCode = 403;
+        return callback(corsError);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
