@@ -722,6 +722,34 @@ async function reactivateSchoolAdmin(req, res) {
     }
 }
 
+// -----------------------------------------------------------------------------
+// GET /api/schools/by-code/:code
+// Public endpoint — resolves a school code to its UUID and display name
+// Used by the mobile app before login to identify the school
+// -----------------------------------------------------------------------------
+async function getSchoolByCode(req, res) {
+    try {
+        const code = req.params.code.trim().toUpperCase();
+
+        const result = await pool.query(`
+            SELECT id, name, code, city, state
+            FROM schools
+            WHERE UPPER(code) = $1
+              AND is_active = TRUE
+        `, [code]);
+
+        if (result.rowCount === 0) {
+            return error(res, 'School not found', 404);
+        }
+
+        return success(res, { school: result.rows[0] });
+
+    } catch (err) {
+        logger.error('getSchoolByCode error', { error: err.message, stack: err.stack });
+        return error(res, 'Failed to resolve school', 500);
+    }
+}
+
 module.exports = {
     createSchool,
     listSchools,
@@ -734,4 +762,5 @@ module.exports = {
     resetSchoolAdminPassword,
     deactivateSchoolAdmin,
     reactivateSchoolAdmin,
+    getSchoolByCode,
 };

@@ -3,6 +3,7 @@
 // Routes for school management — Super Admin only
 //
 // Endpoints:
+//   GET    /api/schools/by-code/:code                         Resolve school code to UUID (public)
 //   POST   /api/schools                                       Create a new school
 //   GET    /api/schools                                       List all schools (paginated)
 //   GET    /api/schools/:schoolId                             Get a single school with stats
@@ -32,29 +33,22 @@ const {
     resetSchoolAdminPassword,
     deactivateSchoolAdmin,
     reactivateSchoolAdmin,
+    getSchoolByCode,
 } = require('./schools.controller');
 
-// All school-management routes require Super Admin privileges
-router.use(authenticate, requireSuperAdmin);
+// Public route — no auth required — must be before authenticate middleware
+router.get('/by-code/:code', getSchoolByCode);
 
-router.post('/', createSchool);
-router.get('/', listSchools);
-router.get('/:schoolId', getSchool);
-router.patch('/:schoolId', updateSchool);
-router.delete('/:schoolId/deactivate', deactivateSchool);
-router.put('/:schoolId/reactivate', reactivateSchool);
-router.post('/:schoolId/admin', createSchoolAdmin);
-
-// Get the School Admin for a school (null if none exists)
-router.get('/:schoolId/admin', getSchoolAdmin);
-
-// Reset School Admin password
-router.post('/:schoolId/admin/:userId/reset-password', resetSchoolAdminPassword);
-
-// Deactivate School Admin
-router.delete('/:schoolId/admin/:userId/deactivate', deactivateSchoolAdmin);
-
-// Reactivate School Admin
-router.put('/:schoolId/admin/:userId/reactivate', reactivateSchoolAdmin);
-
+// All routes below require Super Admin privileges
+router.post('/', authenticate, requireSuperAdmin, createSchool);
+router.get('/', authenticate, requireSuperAdmin, listSchools);
+router.get('/:schoolId', authenticate, requireSuperAdmin, getSchool);
+router.patch('/:schoolId', authenticate, requireSuperAdmin, updateSchool);
+router.delete('/:schoolId/deactivate', authenticate, requireSuperAdmin, deactivateSchool);
+router.put('/:schoolId/reactivate', authenticate, requireSuperAdmin, reactivateSchool);
+router.post('/:schoolId/admin', authenticate, requireSuperAdmin, createSchoolAdmin);
+router.get('/:schoolId/admin', authenticate, requireSuperAdmin, getSchoolAdmin);
+router.post('/:schoolId/admin/:userId/reset-password', authenticate, requireSuperAdmin, resetSchoolAdminPassword);
+router.delete('/:schoolId/admin/:userId/deactivate', authenticate, requireSuperAdmin, deactivateSchoolAdmin);
+router.put('/:schoolId/admin/:userId/reactivate', authenticate, requireSuperAdmin, reactivateSchoolAdmin);
 module.exports = router;
