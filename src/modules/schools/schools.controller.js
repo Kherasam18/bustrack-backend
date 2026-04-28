@@ -675,6 +675,21 @@ async function reactivateSchoolAdmin(req, res) {
             return error(res, 'Invalid user ID format', 400);
         }
 
+        // --- Verify school exists and is active ---
+        const schoolCheck = await pool.query(
+            `SELECT is_active FROM schools WHERE id = $1`,
+            [schoolId]
+        );
+
+        if (schoolCheck.rowCount === 0) {
+            return error(res, 'School not found', 404);
+        }
+
+        if (!schoolCheck.rows[0].is_active) {
+            return error(res,
+                'Cannot reactivate admin for an inactive school', 400);
+        }
+
         // --- Verify the user exists as a SCHOOL_ADMIN for this school ---
         const userResult = await pool.query(
             `SELECT id, is_active FROM users
@@ -694,7 +709,7 @@ async function reactivateSchoolAdmin(req, res) {
         const result = await pool.query(
             `UPDATE users SET is_active = TRUE, updated_at = NOW()
              WHERE id = $1
-             RETURNING id, school_id, role, name, email, is_active,
+             RETURNING id, school_id, role, name, email, phone, is_active,
                        created_at, updated_at`,
             [userId]
         );
