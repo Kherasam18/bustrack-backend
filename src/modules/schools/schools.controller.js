@@ -412,7 +412,7 @@ async function createSchoolAdmin(req, res) {
             return error(res, 'Invalid school ID format', 400);
         }
 
-        const { name, email, password } = req.body;
+        const { name, email, password, phone } = req.body;
 
         // --- Validate required fields ---
         if (!name || !String(name).trim()) {
@@ -431,6 +431,14 @@ async function createSchoolAdmin(req, res) {
 
         if (trimmedPassword.length < 8) {
             return error(res, 'Password must be at least 8 characters', 400);
+        }
+
+        if (!phone || !String(phone).trim()) {
+            return error(res, 'Phone number is required', 400);
+        }
+        const trimmedPhone = String(phone).trim();
+        if (!/^\d{10}$/.test(trimmedPhone)) {
+            return error(res, 'Phone number must be exactly 10 digits', 400);
         }
 
         // --- Check school exists and is active ---
@@ -467,15 +475,30 @@ async function createSchoolAdmin(req, res) {
             return error(res, 'A user with this email already exists in this school', 409);
         }
 
+        // --- Check for duplicate phone within this school ---
+        const phoneDup = await pool.query(
+            `SELECT id FROM users WHERE school_id = $1 AND phone = $2`,
+            [schoolId, trimmedPhone]
+        );
+
+        if (phoneDup.rowCount > 0) {
+            return error(res,
+                'A user with this phone number already exists in this school',
+                409);
+        }
+
         // --- Hash password ---
         const passwordHash = await bcrypt.hash(trimmedPassword, 12);
 
         // --- Insert the School Admin ---
         const result = await pool.query(
-            `INSERT INTO users (school_id, role, name, email, password_hash, is_active, created_at, updated_at)
-             VALUES ($1, 'SCHOOL_ADMIN', $2, $3, $4, TRUE, NOW(), NOW())
-             RETURNING id, school_id, role, name, email, is_active, created_at`,
-            [schoolId, trimmedName, trimmedEmail, passwordHash]
+            `INSERT INTO users
+               (school_id, role, name, email, phone, password_hash,
+                is_active, created_at, updated_at)
+             VALUES ($1, 'SCHOOL_ADMIN', $2, $3, $4, $5, TRUE, NOW(), NOW())
+             RETURNING id, school_id, role, name, email, phone,
+                       is_active, created_at`,
+            [schoolId, trimmedName, trimmedEmail, trimmedPhone, passwordHash]
         );
 
         return success(res, { admin: result.rows[0] }, 'School Admin created successfully', 201);
@@ -483,6 +506,219 @@ async function createSchoolAdmin(req, res) {
     } catch (err) {
         logger.error('createSchoolAdmin error', { error: err.message, stack: err.stack });
         return error(res, 'Failed to create School Admin', 500, err.message);
+    }
+}
+
+// =============================================================================
+// getSchoolAdmin
+// GET /api/schools/:schoolId/admin
+//
+// Returns the SCHOOL_ADMIN user for the given school.
+// Returns { admin: null } (not a 404) if no admin exists yet —
+// the frontend needs to distinguish "no admin" from "not found".
+// =============================================================================
+async function getSchoolAdmin(req, res) {
+    try {
+        const { schoolId } = req.params;
+
+        if (!isValidUUID(schoolId)) {
+            return error(res, 'Invalid school ID format', 400);
+        }
+
+        // --- Verify school exists ---
+        const schoolResult = await pool.query(
+            `SELECT id FROM schools WHERE id = $1`,
+            [schoolId]
+        );
+
+        if (schoolResult.rowCount === 0) {
+            return error(res, 'School not found', 404);
+        }
+
+        // --- Fetch the School Admin (if any) ---
+        const result = await pool.query(
+            `SELECT id, school_id, role, name, email, phone, is_active, created_at
+             FROM users
+             WHERE school_id = $1 AND role = 'SCHOOL_ADMIN'`,
+            [schoolId]
+        );
+
+        return success(res, { admin: result.rows[0] || null });
+
+    } catch (err) {
+        logger.error('getSchoolAdmin error', { error: err.message, stack: err.stack });
+        return error(res, 'Failed to retrieve School Admin', 500, err.message);
+    }
+}
+
+// =============================================================================
+// resetSchoolAdminPassword
+// POST /api/schools/:schoolId/admin/:userId/reset-password
+//
+// Super Admin sets a specific new password for the school admin.
+// Body: { new_password } — required, minimum 8 characters
+// =============================================================================
+async function resetSchoolAdminPassword(req, res) {
+    try {
+        const { schoolId, userId } = req.params;
+
+        if (!isValidUUID(schoolId)) {
+            return error(res, 'Invalid school ID format', 400);
+        }
+        if (!isValidUUID(userId)) {
+            return error(res, 'Invalid user ID format', 400);
+        }
+
+        const { new_password } = req.body;
+
+        if (!new_password || !String(new_password).trim()) {
+            return error(res, 'New password is required', 400);
+        }
+
+        const trimmedPassword = String(new_password).trim();
+
+        if (trimmedPassword.length < 8) {
+            return error(res, 'Password must be at least 8 characters', 400);
+        }
+
+        // --- Verify the user exists as a SCHOOL_ADMIN for this school ---
+        const userResult = await pool.query(
+            `SELECT id FROM users
+             WHERE id = $1 AND school_id = $2 AND role = 'SCHOOL_ADMIN'`,
+            [userId, schoolId]
+        );
+
+        if (userResult.rowCount === 0) {
+            return error(res, 'School Admin not found', 404);
+        }
+
+        // --- Hash and update ---
+        const passwordHash = await bcrypt.hash(trimmedPassword, 12);
+
+        await pool.query(
+            `UPDATE users SET password_hash = $1, updated_at = NOW()
+             WHERE id = $2`,
+            [passwordHash, userId]
+        );
+
+        return success(res, {}, 'School Admin password reset successfully');
+
+    } catch (err) {
+        logger.error('resetSchoolAdminPassword error', { error: err.message, stack: err.stack });
+        return error(res, 'Failed to reset School Admin password', 500, err.message);
+    }
+}
+
+// =============================================================================
+// deactivateSchoolAdmin
+// DELETE /api/schools/:schoolId/admin/:userId/deactivate
+//
+// Sets is_active = FALSE for the school admin.
+// Returns 404 if not found, 400 if already inactive.
+// =============================================================================
+async function deactivateSchoolAdmin(req, res) {
+    try {
+        const { schoolId, userId } = req.params;
+
+        if (!isValidUUID(schoolId)) {
+            return error(res, 'Invalid school ID format', 400);
+        }
+        if (!isValidUUID(userId)) {
+            return error(res, 'Invalid user ID format', 400);
+        }
+
+        // --- Verify the user exists as a SCHOOL_ADMIN for this school ---
+        const userResult = await pool.query(
+            `SELECT id, is_active FROM users
+             WHERE id = $1 AND school_id = $2 AND role = 'SCHOOL_ADMIN'`,
+            [userId, schoolId]
+        );
+
+        if (userResult.rowCount === 0) {
+            return error(res, 'School Admin not found', 404);
+        }
+
+        if (!userResult.rows[0].is_active) {
+            return error(res, 'School Admin is already inactive', 400);
+        }
+
+        // --- Deactivate ---
+        await pool.query(
+            `UPDATE users SET is_active = FALSE, updated_at = NOW()
+             WHERE id = $1`,
+            [userId]
+        );
+
+        return success(res, { userId }, 'School Admin deactivated successfully');
+
+    } catch (err) {
+        logger.error('deactivateSchoolAdmin error', { error: err.message, stack: err.stack });
+        return error(res, 'Failed to deactivate School Admin', 500, err.message);
+    }
+}
+
+// =============================================================================
+// reactivateSchoolAdmin
+// PUT /api/schools/:schoolId/admin/:userId/reactivate
+//
+// Sets is_active = TRUE for the school admin.
+// Returns 404 if not found, 400 if already active.
+// =============================================================================
+async function reactivateSchoolAdmin(req, res) {
+    try {
+        const { schoolId, userId } = req.params;
+
+        if (!isValidUUID(schoolId)) {
+            return error(res, 'Invalid school ID format', 400);
+        }
+        if (!isValidUUID(userId)) {
+            return error(res, 'Invalid user ID format', 400);
+        }
+
+        // --- Verify school exists and is active ---
+        const schoolCheck = await pool.query(
+            `SELECT is_active FROM schools WHERE id = $1`,
+            [schoolId]
+        );
+
+        if (schoolCheck.rowCount === 0) {
+            return error(res, 'School not found', 404);
+        }
+
+        if (!schoolCheck.rows[0].is_active) {
+            return error(res,
+                'Cannot reactivate admin for an inactive school', 400);
+        }
+
+        // --- Verify the user exists as a SCHOOL_ADMIN for this school ---
+        const userResult = await pool.query(
+            `SELECT id, is_active FROM users
+             WHERE id = $1 AND school_id = $2 AND role = 'SCHOOL_ADMIN'`,
+            [userId, schoolId]
+        );
+
+        if (userResult.rowCount === 0) {
+            return error(res, 'School Admin not found', 404);
+        }
+
+        if (userResult.rows[0].is_active) {
+            return error(res, 'School Admin is already active', 400);
+        }
+
+        // --- Reactivate ---
+        const result = await pool.query(
+            `UPDATE users SET is_active = TRUE, updated_at = NOW()
+             WHERE id = $1
+             RETURNING id, school_id, role, name, email, phone, is_active,
+                       created_at, updated_at`,
+            [userId]
+        );
+
+        return success(res, { admin: result.rows[0] }, 'School Admin reactivated successfully');
+
+    } catch (err) {
+        logger.error('reactivateSchoolAdmin error', { error: err.message, stack: err.stack });
+        return error(res, 'Failed to reactivate School Admin', 500, err.message);
     }
 }
 
@@ -494,4 +730,8 @@ module.exports = {
     deactivateSchool,
     reactivateSchool,
     createSchoolAdmin,
+    getSchoolAdmin,
+    resetSchoolAdminPassword,
+    deactivateSchoolAdmin,
+    reactivateSchoolAdmin,
 };
