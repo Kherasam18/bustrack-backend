@@ -857,6 +857,50 @@ async function resetParentPassword(req, res) {
     }
 }
 
+// =============================================================================
+// registerFcmToken
+// POST /api/users/register-fcm-token
+//
+// Registers or updates the device FCM token for a mobile user.
+// Only DRIVER and PARENT roles may call this endpoint.
+// Uses req.user.userId and req.user.school_id from the JWT directly.
+// =============================================================================
+async function registerFcmToken(req, res) {
+    try {
+        const { fcm_token } = req.body;
+        const { userId, role, school_id } = req.user;
+
+        // Validate fcm_token presence and type
+        if (!fcm_token || typeof fcm_token !== 'string' || !fcm_token.trim()) {
+            return error(res, 'fcm_token is required and must be a non-empty string', 400);
+        }
+
+        // Validate fcm_token length (FCM tokens are typically ~163 chars)
+        if (fcm_token.length > 512) {
+            return error(res, 'fcm_token must be at most 512 characters', 400);
+        }
+
+        // Only DRIVER and PARENT roles are allowed
+        if (role !== 'DRIVER' && role !== 'PARENT') {
+            return error(res, 'Only DRIVER and PARENT roles may register an FCM token', 403);
+        }
+
+        // Update the user's FCM token with multi-tenancy guarantee
+        await pool.query(
+            `UPDATE users
+             SET fcm_token = $1, updated_at = NOW()
+             WHERE id = $2::uuid AND school_id = $3::uuid`,
+            [fcm_token.trim(), userId, school_id]
+        );
+
+        return success(res, {}, 'FCM token registered');
+
+    } catch (err) {
+        logger.error('registerFcmToken error', { error: err.message, stack: err.stack });
+        return error(res, 'Failed to register FCM token', 500);
+    }
+}
+
 module.exports = {
     // Drivers
     createDriver,
@@ -874,4 +918,6 @@ module.exports = {
     deactivateParent,
     reactivateParent,
     resetParentPassword,
+    // FCM
+    registerFcmToken,
 };

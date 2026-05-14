@@ -5,6 +5,9 @@
 // All routes require: authenticate + enforceSchoolScope
 // Sub-routes are grouped by role: /drivers and /parents
 //
+// FCM endpoint (authenticate only — no enforceSchoolScope):
+//   POST   /api/users/register-fcm-token              Register device FCM token
+//
 // Driver endpoints:
 //   POST   /api/users/drivers                         Create driver
 //   GET    /api/users/drivers                         List drivers
@@ -50,7 +53,15 @@ const {
     deactivateParent,
     reactivateParent,
     resetParentPassword,
+    // FCM
+    registerFcmToken,
 } = require('./users.controller');
+
+// =============================================================================
+// FCM TOKEN ROUTE — authenticate only (no enforceSchoolScope)
+// Must be declared BEFORE router.use so it is not affected by enforceSchoolScope
+// =============================================================================
+router.post('/register-fcm-token', authenticate, registerFcmToken);
 
 // All user-management routes require authentication + school scope
 router.use(authenticate, enforceSchoolScope);
