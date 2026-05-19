@@ -8,6 +8,7 @@
 // All DB logic is delegated to journeys.service.js.
 // =============================================================================
 
+const pool = require('../../config/db');
 const { success, error } = require('../../utils/response');
 const { parsePagination, paginationMeta } = require('../../utils/pagination');
 const journeyService = require('./journeys.service');
@@ -216,6 +217,97 @@ async function journeyHistory(req, res) {
     }
 }
 
+// =============================================================================
+// getParentContext — GET /api/journeys/parent-context
+// Returns each child linked to the parent, with their bus, route, and
+// the most relevant active journey for today (if any).
+// =============================================================================
+async function getParentContext(req, res) {
+    try {
+        const userId = req.user.userId;
+        const schoolId = req.user.school_id;
+
+        const query = `
+            SELECT
+                s.id                 AS student_id,
+                s.name               AS student_name,
+                b.id                 AS bus_id,
+                b.bus_number,
+                br.route_name,
+                du.name               AS driver_name,
+                du.phone              AS driver_phone,
+                j.id                 AS journey_id,
+                j.journey_type,
+                j.status             AS journey_status,
+                j.tracking_status,
+                j.last_known_lat,
+                j.last_known_lng,
+                j.last_signal_at,
+                j.started_at
+            FROM parent_students ps
+            JOIN students s
+                ON s.id = ps.student_id
+                AND s.school_id = $2::uuid
+            JOIN student_bus_assignments sba
+                ON sba.student_id = s.id
+                AND sba.is_current = TRUE
+            JOIN buses b
+                ON b.id = sba.bus_id
+            LEFT JOIN bus_routes br
+                ON br.bus_id = b.id
+                AND br.is_active = TRUE
+            LEFT JOIN users du
+                ON du.id = br.default_driver_id
+            LEFT JOIN LATERAL (
+                SELECT
+                    id, journey_type, status, tracking_status,
+                    last_known_lat, last_known_lng, last_signal_at, started_at
+                FROM journeys
+                WHERE bus_id = b.id
+                    AND journey_date = CURRENT_DATE
+                    AND school_id = $2::uuid
+                ORDER BY
+                    CASE status
+                        WHEN 'PICKUP_STARTED'  THEN 1
+                        WHEN 'DROP_STARTED'    THEN 2
+                        WHEN 'ARRIVED_SCHOOL'  THEN 3
+                        WHEN 'COMPLETED'       THEN 4
+                        ELSE 5
+                    END ASC
+                LIMIT 1
+            ) j ON TRUE
+            WHERE ps.parent_id = $1::uuid
+        `;
+
+        const { rows } = await pool.query(query, [userId, schoolId]);
+
+        const children = rows.map((row) => ({
+            student_id:   row.student_id,
+            student_name: row.student_name,
+            bus_id:       row.bus_id,
+            bus_number:   row.bus_number,
+            route_name:   row.route_name,
+            driver_name:  row.driver_name  || null,
+            driver_phone: row.driver_phone || null,
+            active_journey: row.journey_id ? {
+                id:              row.journey_id,
+                journey_type:    row.journey_type,
+                journey_status:  row.journey_status,
+                tracking_status: row.tracking_status,
+                last_known_lat:  row.last_known_lat !== null ? parseFloat(row.last_known_lat) : null,
+                last_known_lng:  row.last_known_lng !== null ? parseFloat(row.last_known_lng) : null,
+                last_signal_at:  row.last_signal_at,
+                started_at:      row.started_at,
+            } : null,
+        }));
+
+        return success(res, { children }, 'Parent context retrieved');
+    } catch (err) {
+        logger.error('getParentContext error', { error: err.message, stack: err.stack });
+        return error(res, 'Internal server error', 500);
+    }
+}
+
 module.exports = {
     startPickup,
     arrivedSchool,
@@ -225,4 +317,5 @@ module.exports = {
     todayJourneys,
     getJourney,
     journeyHistory,
+    getParentContext,
 };

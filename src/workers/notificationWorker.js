@@ -60,8 +60,7 @@ async function startWorker() {
 
                 // iii. Fetch FCM tokens for the recipient
                 const tokensResult = await pool.query(
-                    `SELECT fcm_token FROM user_devices
-                     WHERE user_id = $1::uuid`,
+                    `SELECT fcm_token FROM users WHERE id = $1::uuid AND fcm_token IS NOT NULL`,
                     [notification.recipient_user_id]
                 );
 
@@ -127,7 +126,7 @@ async function startWorker() {
         });
     } catch (err) {
         // e. On RabbitMQ connection error — log and retry after 5 seconds
-        logger.error('Notification worker connection error', { error: err.message });
+        logger.error('Notification worker connection error', { error: err.message || String(err) });
         logger.info('Retrying notification worker in 5 seconds...');
         setTimeout(startWorker, 5000);
     }

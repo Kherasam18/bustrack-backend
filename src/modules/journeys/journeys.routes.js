@@ -9,6 +9,9 @@
 //   POST  /api/journeys/end-journey        End drop journey
 //   GET   /api/journeys/my-today           Driver's own today journeys
 //
+// Parent endpoints (authenticate only):
+//   GET   /api/journeys/parent-context     Children + bus + journey context
+//
 // School Admin read endpoints (authenticate + enforceSchoolScope + requireSchoolAdmin):
 //   GET   /api/journeys/today              All today's journeys for school
 //   GET   /api/journeys/:journeyId         Single journey by ID
@@ -17,6 +20,8 @@
 
 const express = require('express');
 const router = express.Router();
+
+const { error } = require('../../utils/response');
 
 const {
     authenticate,
@@ -34,6 +39,7 @@ const {
     todayJourneys,
     getJourney,
     journeyHistory,
+    getParentContext,
 } = require('./journeys.controller');
 
 // =============================================================================
@@ -44,6 +50,16 @@ router.post('/arrived-school',  authenticate, requireDriver, arrivedSchool);
 router.post('/start-drop',      authenticate, requireDriver, startDrop);
 router.post('/end-journey',     authenticate, requireDriver, endJourney);
 router.get('/my-today',         authenticate, requireDriver, myToday);
+
+// =============================================================================
+// PARENT ROUTES — requires authenticate + inline PARENT role guard
+// =============================================================================
+router.get('/parent-context', authenticate, (req, res, next) => {
+    if (req.user.role !== 'PARENT') {
+        return error(res, 'Access denied. Parent role required.', 403);
+    }
+    next();
+}, getParentContext);
 
 // =============================================================================
 // SCHOOL ADMIN READ ROUTES — requires authenticate + enforceSchoolScope + requireSchoolAdmin
