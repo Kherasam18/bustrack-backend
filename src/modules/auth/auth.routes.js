@@ -56,6 +56,7 @@ router.post('/school-admin/login', loginLimiter, schoolAdminCtrl.login);
 router.post('/school-admin/verify-otp', authenticate2FA, schoolAdminCtrl.verifyOTP);
 router.post('/school-admin/forgot-password', otpLimiter, schoolAdminCtrl.forgotPassword);
 router.post('/school-admin/reset-password', schoolAdminCtrl.resetPassword);
+router.post('/school-admin/change-password', authenticate, schoolAdminCtrl.changePassword);
 
 // =============================================================================
 // DRIVER

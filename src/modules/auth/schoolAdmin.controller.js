@@ -209,4 +209,57 @@ async function resetPassword(req, res) {
     }
 }
 
-module.exports = { login, verifyOTP, forgotPassword, resetPassword };
+// -----------------------------------------------------------------------------
+// POST /auth/school-admin/change-password
+// Authenticated endpoint — school admin changes their own password
+// Body: { current_password, new_password }
+// -----------------------------------------------------------------------------
+/**
+ * Allows an authenticated School Admin to change their password.
+ * Validates current password, enforces minimum length and difference check,
+ * then updates the password hash in the database.
+ */
+async function changePassword(req, res) {
+    try {
+        const { current_password, new_password } = req.body;
+        const userId = req.user.userId;
+
+        if (!current_password || !new_password) {
+            return error(res, 'Current password and new password are required', 400);
+        }
+
+        if (new_password.length < 8) {
+            return error(res, 'New password must be at least 8 characters', 400);
+        }
+
+        if (current_password === new_password) {
+            return error(res, 'New password must be different from current password', 400);
+        }
+
+        const result = await pool.query(`
+      SELECT password_hash FROM users WHERE id = $1::uuid
+    `, [userId]);
+
+        if (result.rowCount === 0) {
+            return error(res, 'User not found', 404);
+        }
+
+        const match = await bcrypt.compare(current_password, result.rows[0].password_hash);
+        if (!match) {
+            return error(res, 'Current password is incorrect', 400);
+        }
+
+        const hash = await bcrypt.hash(new_password, 10);
+        await pool.query(`
+      UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2::uuid
+    `, [hash, userId]);
+
+        return success(res, {}, 'Password changed successfully');
+
+    } catch (err) {
+        logger.error('changePassword [schoolAdmin]', { error: err.message });
+        return error(res, 'Password change failed', 500, err.message);
+    }
+}
+
+module.exports = { login, verifyOTP, forgotPassword, resetPassword, changePassword };
