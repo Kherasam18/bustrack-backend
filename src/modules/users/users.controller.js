@@ -867,8 +867,8 @@ async function resetParentPassword(req, res) {
 // =============================================================================
 async function registerFcmToken(req, res) {
     try {
-        const { fcm_token } = req.body;
-        const { userId, role, school_id } = req.user;
+        const { fcm_token, platform } = req.body;
+        const { userId, role } = req.user;
 
         // Validate fcm_token presence and type
         if (!fcm_token || typeof fcm_token !== 'string' || !fcm_token.trim()) {
@@ -880,23 +880,34 @@ async function registerFcmToken(req, res) {
             return error(res, 'fcm_token must be at most 512 characters', 400);
         }
 
+        // Validate platform
+        const VALID_PLATFORMS = ['ANDROID', 'IOS', 'WEB'];
+        if (!platform || !VALID_PLATFORMS.includes(platform)) {
+            return error(res, 'platform must be one of: ANDROID, IOS, WEB', 400);
+        }
+
         // Only DRIVER and PARENT roles are allowed
         if (role !== 'DRIVER' && role !== 'PARENT') {
             return error(res, 'Only DRIVER and PARENT roles may register an FCM token', 403);
         }
 
-        // Update the user's FCM token with multi-tenancy guarantee
+        // Upsert into user_devices — ON CONFLICT handles token reuse / rotation
         await pool.query(
-            `UPDATE users
-             SET fcm_token = $1, updated_at = NOW()
-             WHERE id = $2::uuid AND school_id = $3::uuid`,
-            [fcm_token.trim(), userId, school_id]
+            `INSERT INTO user_devices
+               (user_id, fcm_token, platform, last_active_at, created_at, updated_at)
+             VALUES
+               ($1::uuid, $2, $3, NOW(), NOW(), NOW())
+             ON CONFLICT (fcm_token)
+             DO UPDATE SET
+               last_active_at = NOW(),
+               updated_at     = NOW()`,
+            [userId, fcm_token.trim(), platform]
         );
 
         return success(res, {}, 'FCM token registered');
 
     } catch (err) {
-        logger.error('registerFcmToken error', { error: err.message, stack: err.stack });
+        logger.error('registerFcmToken error', { error: err.message });
         return error(res, 'Failed to register FCM token', 500);
     }
 }
