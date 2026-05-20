@@ -58,9 +58,9 @@ async function startWorker() {
                     return;
                 }
 
-                // iii. Fetch FCM tokens for the recipient
+                // iii. Fetch all FCM tokens for the recipient across all registered devices
                 const tokensResult = await pool.query(
-                    `SELECT fcm_token FROM users WHERE id = $1::uuid AND fcm_token IS NOT NULL`,
+                    `SELECT fcm_token FROM user_devices WHERE user_id = $1::uuid`,
                     [notification.recipient_user_id]
                 );
 
